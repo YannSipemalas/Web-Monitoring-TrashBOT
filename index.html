@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Trash Sorting Bot - Web Monitoring Dashboard</title>
+  <meta name="description" content="Dashboard monitoring real-time untuk Trash Sorting Bot: pergerakan robot, path planning checkpoint, AI camera object detection, dan kapasitas empat kategori tempat sampah.">
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Header Navigation -->
+  <header class="app-header">
+    <div class="header-main-row">
+      <div class="brand-title">
+        <div class="brand-text">
+          <h1>Trash Sorting Bot</h1>
+        </div>
+      </div>
+
+      <div class="header-status-group">
+        <div id="connectionBadge" class="status-badge online">
+          <span class="pulse-dot"></span> ONLINE
+        </div>
+        <div class="header-clock" id="headerClock">00:00:00</div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Kotak Pesan Alert System Bell Button -->
+        <button id="btnOpenAlerts" class="icon-btn alert-bell-btn" title="Kotak Pesan Alert">
+          🔔<span id="alertBadgeCount" class="alert-count-badge">2</span>
+        </button>
+        <button id="btnOpenSettings" class="icon-btn" title="Pengaturan & Kapasitas">⚙️</button>
+        <button id="btnToggleTheme" class="icon-btn" title="Toggle Dark/Light Mode">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Alert Toast Container -->
+  <div id="globalAlertContainer"></div>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-container">
+
+    <!-- Top Grid: Arena Map & Camera / Detection Logs -->
+    <div class="grid-top-row">
+
+      <!-- Column 1: Arena Map & Robot Movement Monitoring -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            Peta Arena & Pergerakan Robot
+          </div>
+          <div class="btn-group">
+            <button id="btnStartSim" class="btn btn-primary">▶ Start</button>
+            <button id="btnPauseSim" class="btn btn-secondary">❚❚ Jeda</button>
+            <button id="btnResetSim" class="btn btn-secondary">↺ Reset</button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- 2D Canvas Map Engine -->
+          <div class="arena-canvas-container">
+            <canvas id="arenaCanvas"></canvas>
+            <div id="arenaCoordsOverlay" class="arena-overlay-coords">X: 0.00 m  Y: 0.60 m</div>
+          </div>
+
+          <!-- Position & Battery Telemetry Row 1 -->
+          <div class="telemetry-stats-grid">
+            <div class="stat-box">
+              <span class="label">Posisi X</span>
+              <span class="value" id="valPosX">0.00 <span class="value-sub">m</span></span>
+            </div>
+
+            <div class="stat-box">
+              <span class="label">Posisi Y</span>
+              <span class="value" id="valPosY">0.00 <span class="value-sub">m</span></span>
+            </div>
+
+            <div class="stat-box">
+              <span class="label">Baterai</span>
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.2rem;">
+                <span class="value" id="valBatteryPct" style="color: var(--status-normal);">0%</span>
+                <span id="valBatteryVoltage" style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">0.0 V</span>
+              </div>
+              <div class="battery-bar-container">
+                <div class="battery-level-bar">
+                  <div id="batteryFillBar" class="battery-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Checkpoint Telemetry Row 2 -->
+          <div class="telemetry-bottom-grid">
+            <div class="stat-box highlight">
+              <span class="label">Current CP</span>
+              <span class="value" id="valCurrentCP" style="color: var(--accent-primary);">START</span>
+            </div>
+
+            <div class="stat-box">
+              <span class="label">Next CP</span>
+              <span class="value" id="valNextCP">CP1</span>
+            </div>
+
+            <div class="stat-box">
+              <span class="label">Jarak</span>
+              <span class="value" id="valDistance">4.0 <span class="value-sub">m</span></span>
+            </div>
+
+            <div class="stat-box">
+              <span class="label">ETA</span>
+              <span class="value" id="valETA">60 <span class="value-sub">dtk</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Live Camera Feed & AI Detection Log -->
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- Snapshot Camera Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              Snapshot Deteksi Sampah
+            </div>
+            <div class="card-actions-row">
+              <button id="btnToggleFpsHud" class="btn-icon-label" style="font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); cursor: pointer; font-weight: 600;">⚡ HUD FPS: OFF</button>
+              <span id="cameraStatusBadge" class="status-badge online" style="font-size: 0.68rem; padding: 2px 6px;">● MODUL KAMERA READY</span>
+            </div>
+          </div>
+
+          <div class="card-body" style="padding-bottom: 0.85rem;">
+            <!-- AI Object Detection Video Canvas -->
+            <div class="camera-feed-container">
+              <div class="camera-tag" style="z-index: 10;">LIVE KAMERA</div>
+              
+              <!-- MJPEG Stream (Background) -->
+              <img id="mjpegFeed" 
+                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" 
+                   alt="Menunggu Koneksi Kamera...">
+              
+              <!-- HUD Overlay Canvas (Foreground) -->
+              <canvas id="cameraCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; background: transparent; pointer-events: none;"></canvas>
+            </div>
+
+            <!-- Latest Detected Item Banner -->
+            <div class="latest-detection-bar">
+              <span class="label">Terdeteksi terakhir</span>
+              <span id="latestDetectedName" class="detected-name">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detection History Log Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              Log Deteksi Sampah
+            </div>
+          </div>
+
+          <div class="card-body" style="padding: 0.75rem;">
+            <div class="log-table-container">
+              <table class="log-table">
+                <thead>
+                  <tr>
+                    <th>Waktu</th>
+                    <th>Nama Objek</th>
+                    <th>Kategori</th>
+                    <th>Ukuran</th>
+                    <th style="text-align: right;">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody id="detectionLogTableBody">
+                  <!-- Rendered dynamically by app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Bottom Grid: Monitoring Kapasitas Tempat Sampah (4 Bins) -->
+    <section>
+      <div class="section-header-row">
+        <h2 class="section-title">
+          Monitoring Kapasitas Tempat Sampah
+        </h2>
+        <span class="section-subtitle">4 Kategori Ember Penampung</span>
+      </div>
+
+      <div class="bins-grid">
+
+        <!-- Bin 1: Plastik -->
+        <div id="binCard_plastic" class="bin-card plastic">
+          <div class="bin-card-header">
+            <div class="bin-title">
+              Botol Plastik
+            </div>
+            <div id="binStatus_plastic" class="bin-status-badge normal">Normal</div>
+          </div>
+
+          <div class="bin-count-display">
+            <div class="count-numbers">
+              <span id="binCount_plastic">35</span>
+              <span id="binMax_plastic" class="max">/ 50</span>
+            </div>
+            <div id="binPct_plastic" class="count-percentage" style="color: var(--accent-primary);">70%</div>
+          </div>
+
+          <div class="progress-bar-container">
+            <div id="binFill_plastic" class="progress-bar-fill" style="width: 70%;"></div>
+          </div>
+
+          <div class="bin-actions">
+            <button id="btnAdd_plastic" class="bin-btn">+ Tambah</button>
+            <button id="btnReset_plastic" class="bin-btn">Kosongkan</button>
+          </div>
+        </div>
+
+        <!-- Bin 2: Kertas -->
+        <div id="binCard_paper" class="bin-card paper">
+          <div class="bin-card-header">
+            <div class="bin-title">
+              Kertas
+            </div>
+            <div id="binStatus_paper" class="bin-status-badge normal">Normal</div>
+          </div>
+
+          <div class="bin-count-display">
+            <div class="count-numbers">
+              <span id="binCount_paper">28</span>
+              <span id="binMax_paper" class="max">/ 50</span>
+            </div>
+            <div id="binPct_paper" class="count-percentage" style="color: var(--accent-primary);">56%</div>
+          </div>
+
+          <div class="progress-bar-container">
+            <div id="binFill_paper" class="progress-bar-fill" style="width: 56%;"></div>
+          </div>
+
+          <div class="bin-actions">
+            <button id="btnAdd_paper" class="bin-btn">+ Tambah</button>
+            <button id="btnReset_paper" class="bin-btn">Kosongkan</button>
+          </div>
+        </div>
+
+        <!-- Bin 3: Kaleng -->
+        <div id="binCard_can" class="bin-card can">
+          <div class="bin-card-header">
+            <div class="bin-title">
+              Kaleng
+            </div>
+            <div id="binStatus_can" class="bin-status-badge normal">Normal</div>
+          </div>
+
+          <div class="bin-count-display">
+            <div class="count-numbers">
+              <span id="binCount_can">12</span>
+              <span id="binMax_can" class="max">/ 50</span>
+            </div>
+            <div id="binPct_can" class="count-percentage" style="color: var(--accent-primary);">24%</div>
+          </div>
+
+          <div class="progress-bar-container">
+            <div id="binFill_can" class="progress-bar-fill" style="width: 24%;"></div>
+          </div>
+
+          <div class="bin-actions">
+            <button id="btnAdd_can" class="bin-btn">+ Tambah</button>
+            <button id="btnReset_can" class="bin-btn">Kosongkan</button>
+          </div>
+        </div>
+
+        <!-- Bin 4: Unknown -->
+        <div id="binCard_unknown" class="bin-card unknown">
+          <div class="bin-card-header">
+            <div class="bin-title">
+              Unknown
+            </div>
+            <div id="binStatus_unknown" class="bin-status-badge warning">Hampir Penuh</div>
+          </div>
+
+          <div class="bin-count-display">
+            <div class="count-numbers">
+              <span id="binCount_unknown">48</span>
+              <span id="binMax_unknown" class="max">/ 50</span>
+            </div>
+            <div id="binPct_unknown" class="count-percentage" style="color: var(--accent-primary);">96%</div>
+          </div>
+
+          <div class="progress-bar-container">
+            <div id="binFill_unknown" class="progress-bar-fill" style="width: 96%;"></div>
+          </div>
+
+          <div class="bin-actions">
+            <button id="btnAdd_unknown" class="bin-btn">+ Tambah</button>
+            <button id="btnReset_unknown" class="bin-btn">Kosongkan</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Alert Messages Inbox Modal Dialog -->
+  <div id="alertsModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1rem; font-weight: 700;">🔔 Kotak Pesan Alert & Peringatan</h3>
+        <button id="btnCloseAlerts" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+          <span style="font-size: 0.78rem; color: var(--text-secondary);">Riwayat Pesan Notifikasi Sistem</span>
+          <button id="btnClearAlerts" class="btn btn-secondary" style="font-size: 0.7rem; padding: 2px 8px;">Kosongkan Pesan</button>
+        </div>
+        <div id="alertMessagesContainer" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnCloseAlertsFooter" class="btn btn-secondary">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings & Capacity Config Modal Dialog -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1rem; font-weight: 700;">Pengaturan Kapasitas Tempat Sampah</h3>
+        <button id="btnCloseSettings" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">Tentukan batas kapasitas maksimal (Max Count) untuk masing-masing kategori tempat sampah:</p>
+
+        <div class="form-group">
+          <label for="inputMaxPlastic">Kapasitas Maksimal Botol Plastik</label>
+          <input type="number" id="inputMaxPlastic" class="form-control" value="50" min="5" max="500">
+        </div>
+
+        <div class="form-group">
+          <label for="inputMaxPaper">Kapasitas Maksimal Kertas</label>
+          <input type="number" id="inputMaxPaper" class="form-control" value="50" min="5" max="500">
+        </div>
+
+        <div class="form-group">
+          <label for="inputMaxCan">Kapasitas Maksimal Kaleng</label>
+          <input type="number" id="inputMaxCan" class="form-control" value="50" min="5" max="500">
+        </div>
+
+        <div class="form-group">
+          <label for="inputMaxUnknown">Kapasitas Maksimal Unknown</label>
+          <input type="number" id="inputMaxUnknown" class="form-control" value="50" min="5" max="500">
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="btnClearAllData" class="btn btn-secondary" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">🔄 Reset Semua Data Sampah</button>
+          <button id="btnSaveSettings" class="btn btn-primary">Simpan Pengaturan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>Trash Sorting Bot Web Monitoring System &copy; 2026. Microcontroller & ROS API Ready.</p>
+  </footer>
+
+  <!-- Application Modules -->
+  <script src="js/telemetry.js?v=6.0"></script>
+  <script src="js/arena.js?v=6.0"></script>
+  <script src="js/vision.js?v=6.0"></script>
+  <script src="js/app.js?v=6.0"></script>
+
+</body>
+</html>
