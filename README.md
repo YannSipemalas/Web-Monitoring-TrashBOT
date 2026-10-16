@@ -2,6 +2,8 @@
 
 Dashboard web untuk memonitor robot pemilah sampah (*Trash Sorting Robot*) secara real-time: posisi robot di peta arena, status baterai, kamera deteksi sampah, kapasitas tempat sampah, serta kontrol manual (teleop) dari browser.
 
+![Tampilan Web Monitoring TrashBOT](GUI-Monitoring-TrashBOT.png)
+
 > [!NOTE]
 > **Status saat ini:** robot dikendalikan **manual** (teleop keyboard). Dashboard menerima data dari simulasi Gazebo ([trash-dumm-simulation](https://github.com/YannSipemalas/trash-dumm-simulation)) atau dari robot fisik melalui HTTP. Navigasi autonomous **belum diimplementasikan**.
 
